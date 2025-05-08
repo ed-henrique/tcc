@@ -7,11 +7,11 @@ import time
 
 
 # 1. Comando para executar quando acabar de configurar o ambiente de desenvolvimento
-#   configure_command = "cd ../../ && ./waf clean && CXXFLAGS=\"-O3 -w\" ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python"
+#   configure_command = "cd ../../ && ./waf clean && CXXFLAGS='-O3 -w' ./waf -d optimized configure --enable-examples --enable-modules=lte --disable-python"
 #
 # 2. Outros comandos que já constavam no script original
-#   simulation_command = "cd ../../ && ./waf --run \"lena-nb-5G-scenario"
-#   callgrind_command = "cd ../../ && ./waf --command-template\"valgrind --tool=callgrind  \%\s\" --run \"lena-nb-udp-data-transfer"
+#   simulation_command = "cd ../../ && ./waf --run 'lena-nb-5G-scenario'"
+#   callgrind_command = "cd ../../ && ./waf --command-template 'valgrind --tool=callgrind  %s' --run 'lena-nb-udp-data-transfer'"
 
 # Comando optimizado
 sim_command = "./build/src/lte/examples/ns3.32-lena-nb-5G-scenario-optimized"
@@ -113,7 +113,7 @@ class TaskQueue(queue.Queue):
 
 
 start_time = time.time()
-simTime = 12 * 60 * 60  # Simulation time in seconds
+simTime = 2 * 60 * 60  # Simulation time in seconds
 simu_queue = TaskQueue(
     7
 )  # This is the number of parallel workers. This number should be below your number of CPU cores. Note that more parallel workers consume more RAM
