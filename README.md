@@ -28,6 +28,14 @@
 
 - Apenas rodar o *script* através do `runner.py`, pois ele já utiliza a versão de *build* optimizada do código
 
+## Scripts
+
+**Geração de Veículos Aleatórios a Partir de uma Rede**
+
+```sh
+python3 randomTrips.py -n NET_FILE -e 50000 -p 2.50 --min-distance 600.0 -r ROUTE_FILE
+```
+
 ## Referências
 
 - [Como instalar ns3.32 no Ubuntu 20.04](https://www.youtube.com/watch?v=xE1jUh3-mOI)
