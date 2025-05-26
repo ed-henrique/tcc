@@ -3,6 +3,7 @@
 ## Requisitos
 
 - ns3.32
+- sumo 1.23.1
 
 ---
 
