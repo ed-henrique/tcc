@@ -36,6 +36,18 @@
 python3 randomTrips.py -n NET_FILE -e 50000 -p 2.50 --min-distance 600.0 -r ROUTE_FILE
 ```
 
+**Criar Arquivo de Trace**
+
+```sh
+sumo -c SUMO_CONFIG_FILE --fcd-output TRACE_FILE
+```
+
+**Converter Arquivo de Trace para Arquivo de Mobilidade NS2**
+
+```sh
+python3 traceExporter.py --fcd-input TRACE_FILE --ns2mobility-output MOBILITY_FILE
+```
+
 ## Referências
 
 - [Como instalar ns3.32 no Ubuntu 20.04](https://www.youtube.com/watch?v=xE1jUh3-mOI)
