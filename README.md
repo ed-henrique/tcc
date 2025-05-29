@@ -29,6 +29,12 @@
 
 ## Scripts
 
+**Automatização do Arquivo de Mobilidade NS2**
+
+```sh
+make -e end_time=END_TIME period=PERIOD min_distance=MIN_DISTANCE
+```
+
 **Geração de Veículos Aleatórios a Partir de uma Rede**
 
 ```sh
