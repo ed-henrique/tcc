@@ -19,11 +19,9 @@
 ## Pendências
 
 - [x] Parâmetro para **Quantidade de nós** 
-- [ ] Parâmetro para **Cobertura de Rede** 
-- [ ] Parâmetro para **Tamanho do Payload** 
+- [x] Parâmetro para **Tamanho do Payload** 
 - [x] Parâmetro para **Modo de Transmissão** 
-- [ ] Parâmetro para **Frequência de Coleta de Dados de Rastreamento** 
-- [ ] Realizar o cálculo da cobertura de rede considerando torres estáticas 
+- [x] Parâmetro para **Frequência de Coleta de Dados de Rastreamento** 
 
 ## Observações
 
