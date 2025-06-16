@@ -1,5 +1,9 @@
 # TCC
 
+## Limitação
+
+Uso do módulo de WiFi ao invés do LENA-NB-IoT, porque não foi possível implementar o handover nele.
+
 ## Requisitos
 
 - ns3.32
@@ -9,19 +13,22 @@
 
 1. Baixe o ns3.32
 2. Descompacte o arquivo
-3. Clone o repositório [LENA-NB](https://github.com/tudo-cni/ns3-lena-nb) para substituir a pasta `lte` do ns3.32
-4. Clone o repositório [Winner+ Channel](https://github.com/tudo-cni/ns3-propagation-winner-plus) para substituir a pasta `propagation` do ns3.32
-5. Instale as bibliotecas necessárias destacadas [neste vídeo](https://www.youtube.com/watch?v=xE1jUh3-mOI)
-6. Execute o `./build.py`
-7. Execute o `./waf` com o comando de configuração presente no arquivo `runner.py`
-8. Execute as simulações usando `./runner.py`
+3. Instale as bibliotecas necessárias destacadas [neste vídeo](https://www.youtube.com/watch?v=xE1jUh3-mOI)
+4. Execute o `./build.py`
+5. Execute o `./waf` com o comando de configuração presente no arquivo `runner.py`
+6. Execute as simulações usando `./runner.py`
 
 ## Pendências
 
-- [x] Parâmetro para **Quantidade de nós** 
-- [x] Parâmetro para **Tamanho do Payload** 
-- [x] Parâmetro para **Modo de Transmissão** 
+- [x] Parâmetro para **Quantidade de Nós** 
 - [x] Parâmetro para **Frequência de Coleta de Dados de Rastreamento** 
+- [ ] Adiciona handover entre pontos
+- [ ] Adicionar modelo de energia
+  - [ ] PSM, DRX e eDRX (Constantes a cada x segundos)
+  - [ ] Uplink (Envio)
+  - [ ] Downlink (Recebimento)
+  - [ ] Repouso
+  - [ ] PSM do GPS
 
 ## Observações
 
