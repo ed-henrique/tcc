@@ -11,52 +11,52 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
-#include "position-server.h"
+#include "checkpointing-position-server.h"
 
 #include <sstream>
 #include <iostream>
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("PositionServerApplication");
+NS_LOG_COMPONENT_DEFINE("CheckpointingPositionServerApplication");
 
-NS_OBJECT_ENSURE_REGISTERED(PositionServer);
+NS_OBJECT_ENSURE_REGISTERED(CheckpointingPositionServer);
 
-TypeId PositionServer::GetTypeId(void) {
-  static TypeId tid = TypeId("ns3::PositionServer")
+TypeId CheckpointingPositionServer::GetTypeId(void) {
+  static TypeId tid = TypeId("ns3::CheckpointingPositionServer")
     .SetParent<Application>()
     .SetGroupName("Applications")
-    .AddConstructor<PositionServer>()
+    .AddConstructor<CheckpointingPositionServer>()
     .AddAttribute("Port", "Port on which we listen for incoming packets.",
                    UintegerValue(9),
-                   MakeUintegerAccessor(&PositionServer::m_port),
+                   MakeUintegerAccessor(&CheckpointingPositionServer::m_port),
                    MakeUintegerChecker<uint16_t>())
     .AddTraceSource("Rx", "A packet has been received",
-                     MakeTraceSourceAccessor(&PositionServer::m_rxTrace),
+                     MakeTraceSourceAccessor(&CheckpointingPositionServer::m_rxTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource("RxWithAddresses", "A packet has been received",
-                     MakeTraceSourceAccessor(&PositionServer::m_rxTraceWithAddresses),
+                     MakeTraceSourceAccessor(&CheckpointingPositionServer::m_rxTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
   ;
   return tid;
 }
 
-PositionServer::PositionServer() {
+CheckpointingPositionServer::CheckpointingPositionServer() {
   NS_LOG_FUNCTION(this);
 }
 
-PositionServer::~PositionServer() {
+CheckpointingPositionServer::~CheckpointingPositionServer() {
   NS_LOG_FUNCTION(this);
   m_socket = 0;
   m_socket6 = 0;
 }
 
-void PositionServer::DoDispose(void) {
+void CheckpointingPositionServer::DoDispose(void) {
   NS_LOG_FUNCTION(this);
   Application::DoDispose();
 }
 
-void  PositionServer::StartApplication(void) {
+void  CheckpointingPositionServer::StartApplication(void) {
   NS_LOG_FUNCTION(this);
 
   if (m_socket == 0) {
@@ -101,11 +101,11 @@ void  PositionServer::StartApplication(void) {
     }
   }
 
-  m_socket->SetRecvCallback(MakeCallback(&PositionServer::HandleRead, this));
-  m_socket6->SetRecvCallback(MakeCallback(&PositionServer::HandleRead, this));
+  m_socket->SetRecvCallback(MakeCallback(&CheckpointingPositionServer::HandleRead, this));
+  m_socket6->SetRecvCallback(MakeCallback(&CheckpointingPositionServer::HandleRead, this));
 }
 
-void  PositionServer::StopApplication() {
+void  CheckpointingPositionServer::StopApplication() {
   NS_LOG_FUNCTION(this);
 
   if (m_socket != 0)  {
@@ -119,7 +119,7 @@ void  PositionServer::StopApplication() {
   }
 }
 
-void  PositionServer::HandleRead(Ptr<Socket> socket) {
+void  CheckpointingPositionServer::HandleRead(Ptr<Socket> socket) {
   NS_LOG_FUNCTION(this << socket);
 
   Ptr<Packet> packet;
@@ -154,9 +154,8 @@ void  PositionServer::HandleRead(Ptr<Socket> socket) {
     std::string line;
 
     std::ostringstream ack;
-    std::string response = ack.str();
     while (std::getline(batch, line)) {
-      if line[0] == '.' {
+      if (line[0] == '.') {
         break;
       }
 

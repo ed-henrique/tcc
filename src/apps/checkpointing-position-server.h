@@ -1,5 +1,5 @@
-#ifndef POSITION_SERVER_H
-#define POSITION_SERVER_H
+#ifndef CHECKPOINTING_POSITION_SERVER_H
+#define CHECKPOINTING_POSITION_SERVER_H
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
@@ -12,11 +12,11 @@ namespace ns3 {
 class Socket;
 class Packet;
 
-class PositionServer : public Application {
+class CheckpointingPositionServer : public Application {
 public:
   static TypeId GetTypeId(void);
-  PositionServer();
-  virtual ~PositionServer();
+  CheckpointingPositionServer();
+  virtual ~CheckpointingPositionServer();
 
 protected:
   virtual void DoDispose(void);

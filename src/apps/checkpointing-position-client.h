@@ -1,22 +1,23 @@
-#ifndef POSITION_CLIENT_H
-#define POSITION_CLIENT_H
+#ifndef CHECKPOINTING_POSITION_CLIENT_H
+#define CHECKPOINTING_POSITION_CLIENT_H
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
+#include "ns3/random-variable-stream.h"
 
 namespace ns3 {
 
 class Socket;
 class Packet;
 
-class PositionClient : public Application {
+class CheckpointingPositionClient : public Application {
 public:
   static TypeId GetTypeId(void);
-  PositionClient();
-  virtual ~PositionClient();
+  CheckpointingPositionClient();
+  virtual ~CheckpointingPositionClient();
 
 protected:
   virtual void DoDispose(void);
@@ -36,7 +37,8 @@ private:
   Ptr<Node> m_enbNode;
   std::map<uint32_t, std::string> m_positionMap;
   uint32_t m_nextId;
-  double m_range;
+  double m_threshold;
+  Ptr<UniformRandomVariable> m_random;
 
   Time m_interval;
   Time m_positionInterval;

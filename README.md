@@ -18,6 +18,9 @@ Uso do módulo de WiFi ao invés do LENA-NB-IoT, porque não foi possível imple
 5. Execute o `./waf` com o comando de configuração presente no arquivo `runner.py`
 6. Execute as simulações usando `./runner.py`
 
+> [!IMPORTANT]
+> Exporte a variável de ambiente `LD_LIBRARY_PATH` com o caminho do diretório `build/lib` para evitar problemas.
+
 ## Pendências
 
 - [x] Parâmetro para **Quantidade de Nós** 

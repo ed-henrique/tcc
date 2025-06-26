@@ -13,84 +13,74 @@
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/mobility-module.h"
-#include "position-client.h"
+#include "deadreckoning-position-client.h"
 
 #include <sstream>
 #include <iostream>
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("PositionClientApplication");
+NS_LOG_COMPONENT_DEFINE("DeadreckoningPositionClientApplication");
 
-NS_OBJECT_ENSURE_REGISTERED(PositionClient);
+NS_OBJECT_ENSURE_REGISTERED(DeadreckoningPositionClient);
 
-TypeId PositionClient::GetTypeId(void) {
-  static TypeId tid = TypeId("ns3::PositionClient")
+TypeId DeadreckoningPositionClient::GetTypeId(void) {
+  static TypeId tid = TypeId("ns3::DeadreckoningPositionClient")
     .SetParent<Application>()
     .SetGroupName("Applications")
-    .AddConstructor<PositionClient>()
+    .AddConstructor<DeadreckoningPositionClient>()
     .AddAttribute("Interval", 
                    "The time to wait between packets",
                    TimeValue(Seconds(1.0)),
-                   MakeTimeAccessor(&PositionClient::m_interval),
-                   MakeTimeChecker())
-    .AddAttribute("PositionInterval", 
-                   "The time to wait between gathering position",
-                   TimeValue(Seconds(1.0)),
-                   MakeTimeAccessor(&PositionClient::m_positionInterval),
+                   MakeTimeAccessor(&DeadreckoningPositionClient::m_interval),
                    MakeTimeChecker())
     .AddAttribute("Node", 
                    "The node in which the application is installed",
                    PointerValue(nullptr),
-                   MakePointerAccessor(&PositionClient::m_node),
+                   MakePointerAccessor(&DeadreckoningPositionClient::m_node),
                    MakePointerChecker<Node>())
     .AddAttribute("ExtraPayloadSize", 
                    "Extra payload size to add to packets",
                    UintegerValue(0),
-                   MakeUintegerAccessor(&PositionClient::m_extraPayloadSize),
-                   MakeUintegerChecker<uint32_t>())
-    .AddAttribute("AmountPositionsToSend", 
-                   "Amount of positions to send each time",
-                   UintegerValue(10),
-                   MakeUintegerAccessor(&PositionClient::m_amountPositionsToSend,
+                   MakeUintegerAccessor(&DeadreckoningPositionClient::m_extraPayloadSize),
                    MakeUintegerChecker<uint32_t>())
     .AddAttribute("EnbNode", 
                    "The enbNode to which the node is attached to",
                    PointerValue(nullptr),
-                   MakePointerAccessor(&PositionClient::m_enbNode),
+                   MakePointerAccessor(&DeadreckoningPositionClient::m_enbNode),
                    MakePointerChecker<Node>())
-    .AddAttribute("Range", 
-                   "The enbNode range",
-                   DoubleValue(0.0),
-                   MakeDoubleAccessor(&PositionClient::m_range),
+    .AddAttribute("Threshold", 
+                   "Chance to send the packet",
+                   DoubleValue(0.5),
+                   MakeDoubleAccessor(&SimplePositionClient::m_threshold),
                    MakeDoubleChecker<double>())
     .AddAttribute("RemoteAddress", 
                    "The destination Address of the outbound packets",
                    AddressValue(),
-                   MakeAddressAccessor(&PositionClient::m_peerAddress),
+                   MakeAddressAccessor(&DeadreckoningPositionClient::m_peerAddress),
                    MakeAddressChecker())
     .AddAttribute("RemotePort", 
                    "The destination port of the outbound packets",
                    UintegerValue(0),
-                   MakeUintegerAccessor(&PositionClient::m_peerPort),
+                   MakeUintegerAccessor(&DeadreckoningPositionClient::m_peerPort),
                    MakeUintegerChecker<uint16_t>())
     .AddTraceSource("Tx", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor(&PositionClient::m_txTrace),
+                     MakeTraceSourceAccessor(&DeadreckoningPositionClient::m_txTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource("Rx", "A packet has been received",
-                     MakeTraceSourceAccessor(&PositionClient::m_rxTrace),
+                     MakeTraceSourceAccessor(&DeadreckoningPositionClient::m_rxTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource("TxWithAddresses", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor(&PositionClient::m_txTraceWithAddresses),
+                     MakeTraceSourceAccessor(&DeadreckoningPositionClient::m_txTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
     .AddTraceSource("RxWithAddresses", "A packet has been received",
-                     MakeTraceSourceAccessor(&PositionClient::m_rxTraceWithAddresses),
+                     MakeTraceSourceAccessor(&DeadreckoningPositionClient::m_rxTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
   ;
   return tid;
 }
 
-PositionClient::PositionClient() {
+DeadreckoningPositionClient::DeadreckoningPositionClient() {
   NS_LOG_FUNCTION(this);
   m_sent = 0;
   m_socket = 0;
@@ -98,23 +88,23 @@ PositionClient::PositionClient() {
   m_enbNode = nullptr;
   m_nextId = 0;
   m_extraPayloadSize = 0;
-  m_range = 0;
+  m_random = CreateObject<UniformRandomVariable>();
   m_sendEvent = EventId();
 }
 
-PositionClient::~PositionClient() {
+DeadreckoningPositionClient::~DeadreckoningPositionClient() {
   NS_LOG_FUNCTION(this);
   m_socket = 0;
   m_node = nullptr;
   m_enbNode = nullptr;
 }
 
-void PositionClient::DoDispose(void) {
+void DeadreckoningPositionClient::DoDispose(void) {
   NS_LOG_FUNCTION(this);
   Application::DoDispose();
 }
 
-void  PositionClient::StartApplication(void) {
+void  DeadreckoningPositionClient::StartApplication(void) {
   NS_LOG_FUNCTION(this);
 
   if (m_socket == 0) {
@@ -149,52 +139,28 @@ void  PositionClient::StartApplication(void) {
     }
   }
 
-  m_socket->SetRecvCallback(MakeCallback(&PositionClient::HandleRead, this));
-  m_socket->SetAllowBroadcast(true);
+  m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
+  m_socket->SetAllowBroadcast(false);
   ScheduleTransmit(Seconds(0.));
-  SchedulePositionGathering(Seconds(0.));
 }
 
-void  PositionClient::StopApplication() {
+void  DeadreckoningPositionClient::StopApplication() {
   NS_LOG_FUNCTION(this);
 
   if (m_socket != 0)  {
     m_socket->Close();
-    m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
     m_socket = 0;
   }
 
   Simulator::Cancel(m_sendEvent);
-  m_positionMap.clear();
 }
 
-void  PositionClient::ScheduleTransmit(Time dt) {
+void  DeadreckoningPositionClient::ScheduleTransmit(Time dt) {
   NS_LOG_FUNCTION(this << dt);
-  m_sendEvent = Simulator::Schedule(dt, &PositionClient::Send, this);
+  m_sendEvent = Simulator::Schedule(dt, &DeadreckoningPositionClient::Send, this);
 }
 
-void  PositionClient::SchedulePositionGathering(Time dt) {
-  NS_LOG_FUNCTION(this << dt);
-  Simulator::Schedule(dt, &PositionClient::GatherPosition, this);
-}
-
-void  PositionClient::GatherPosition(void) {
-  NS_LOG_FUNCTION(this);
-
-  Ptr<MobilityModel> ueMobility = m_node->GetObject<MobilityModel>();
-  Vector uePos = ueMobility->GetPosition();
-
-  std::ostringstream pos;
-  pos << uePos.x << "," << uePos.y << "," << uePos.z;
-  std::string msg = pos.str();
-
-  m_positionMap[m_nextId++] = msg;
-  NS_LOG_INFO("consumed 33 mJ");
-
-  Simulator::Schedule(m_positionInterval, &PositionClient::GatherPosition, this);
-}
-
-void  PositionClient::Send(void) {
+void  DeadreckoningPositionClient::Send(void) {
   NS_LOG_FUNCTION(this);
 
   NS_ASSERT(m_sendEvent.IsExpired());
@@ -208,21 +174,17 @@ void  PositionClient::Send(void) {
 
   NS_LOG_INFO("is " << distance << "m from eNB");
 
-  if (m_positionMap.size() < m_amountPositionsToSend || distance > m_range) {
-    ScheduleTransmit(m_interval);
-    return;
-  }
-
   Address localAddress;
   m_socket->GetSockName(localAddress);
 
-  std::ostringstream pos;
-  for (auto posPair = m_positionMap.rbegin(); posPair != m_positionMap.rend(); ++posPair) {
-    pos << posPair.first << " " << posPair.second << "\n";
-  }
+  Vector uePos = ueMobility->GetPosition();
 
+  std::ostringstream pos;
+  pos << m_nextId++ << " " << uePos.x << "," << uePos.y << "," << uePos.z;
   pos << std::string(m_extraPayloadSize, '.');
   std::string msg = pos.str();
+
+  NS_LOG_INFO("consumed 33 mJ");
 
   Ptr<Packet> p = Create<Packet>(
       reinterpret_cast<const uint8_t*>(msg.c_str()), 
@@ -235,6 +197,14 @@ void  PositionClient::Send(void) {
     m_txTraceWithAddresses(p, localAddress, InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
   } else if (Ipv6Address::IsMatchingType(m_peerAddress)) {
     m_txTraceWithAddresses(p, localAddress, Inet6SocketAddress(Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
+  }
+
+  if (m_random->GetValue(0.0, 1.0) > m_threshold) {
+    NS_LOG_INFO("Package lost");
+    ++m_sent;
+
+    ScheduleTransmit(m_interval);
+    return;
   }
 
   m_socket->Send(p);
@@ -255,54 +225,6 @@ void  PositionClient::Send(void) {
   }
 
   ScheduleTransmit(m_interval);
-}
-
-void PositionClient::HandleRead(Ptr<Socket> socket) {
-  NS_LOG_FUNCTION(this << socket);
-
-  Ptr<Packet> packet;
-  Address from;
-  Address localAddress;
-  while((packet = socket->RecvFrom(from))) {
-    socket->GetSockName(localAddress);
-
-    m_rxTrace(packet);
-    m_rxTraceWithAddresses(packet, from, localAddress);
-
-    packet->RemoveAllPacketTags();
-    packet->RemoveAllByteTags();
-
-    auto size = packet->GetSize();
-    uint8_t *msgRaw = new uint8_t[size + 1];
-    packet->CopyData(msgRaw, size);
-    msgRaw[size] = '\0';
-    std::string msg = reinterpret_cast<char*>(msgRaw);
-
-    if (InetSocketAddress::IsMatchingType(from)) {
-      NS_LOG_INFO("received '" << msg << "' from " << InetSocketAddress::ConvertFrom(from).GetIpv4()
-                  << " port " << InetSocketAddress::ConvertFrom(from).GetPort());
-    } else if (Inet6SocketAddress::IsMatchingType(from)) {
-      NS_LOG_INFO("received '" << msg << "' from " << Inet6SocketAddress::ConvertFrom(from).GetIpv6()
-                  << " port " << Inet6SocketAddress::ConvertFrom(from).GetPort());
-    }
-
-    std::istringstream batch(msg);
-    std::string line;
-
-    while (std::getline(batch, line)) {
-      size_t idSep = line.find(" ");
-
-      if (idSep != std::string::npos) {
-        std::string posIdRaw = line.substr(0, idSep);
-        uint32_t posId = std::stoul(posIdRaw);
-        m_positionMap.erase(posId);
-
-        NS_LOG_INFO("received OK for ID " << posId);
-      }
-    }
-
-    delete[] msgRaw;
-  }
 }
 
 } // Namespace ns3
