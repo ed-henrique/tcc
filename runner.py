@@ -54,7 +54,7 @@ class SimulationParameters:
         call += f" --simName={self.sim_name}"
         call += f" --randomSeed={self.random_seed}"
         call += f" --range={self.range}"
-        call += f" --positionInterval={self.positionInterval}"
+        call += f" --positionInterval={self.position_interval}"
         call += f" --payloadSize={self.payload_size}"
         call += f" --syncFrequency={self.sync_frequency}"
         call += f" --edt={self.edt}"

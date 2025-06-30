@@ -217,10 +217,10 @@ void  SimplePositionClient::Send(void) {
   m_socket->GetSockName(localAddress);
 
   std::ostringstream pos;
-  for (auto posPair = m_positionMap.rbegin(), next_it = it; posPair != m_positionMap.rend(); it = next_it) {
+  for (auto posPair = m_positionMap.rbegin(), next_it = posPair; posPair != m_positionMap.rend(); posPair = next_it) {
     ++next_it;
     pos << posPair->first << " " << posPair->second << "\n";
-    m_positionMap.erase(posPair);
+    m_positionMap.erase(posPair->first);
   }
 
   pos << std::string(m_extraPayloadSize, '.');

@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
     clientApp->SetAttribute("Node", PointerValue(ueNodes.Get(i)));
     clientApp->SetAttribute("EnbNode", PointerValue(enbNodes.Get(0)));
     clientApp->SetAttribute("ExtraPayloadSize", UintegerValue(packetsize_app_a + payloadSize));
-    clientApp->SetAttribute("PositionInterval", TimeValue(syncFrequency));
+    clientApp->SetAttribute("PositionInterval", TimeValue(Seconds(syncFrequency)));
     clientApp->SetAttribute("Interval", TimeValue(Seconds(positionInterval)));
     ueNodes.Get(i)->AddApplication(clientApp);
     clientApps.Add(clientApp);
