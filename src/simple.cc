@@ -36,15 +36,17 @@ int main(int argc, char *argv[]) {
   int packetsize_app_a = 49; // 32 Bytes 5G mMTC payload + 4 Bytes CoAP Header + 13 Bytes DTLS Header
   int payloadSize;
   double syncFrequency;
-  double packetChance = 0.3;
+  double positionInterval = 1.0;
+  double range = 300.0; // in meters
   bool edt = false;
 
   CommandLine cmd(__FILE__);
   cmd.AddValue("mobilityFile", "Mobility file", mobilityFile);
-  cmd.AddValue("packetChance", "Packet chance", packetChance);
+  cmd.AddValue("range", "enB tower range", range);
   cmd.AddValue("simName", "Total duration of the simulation", simName);
   cmd.AddValue("payloadSize", "Size of the payload", payloadSize);
   cmd.AddValue("syncFrequency", "Frequency of position gathering", syncFrequency);
+  cmd.AddValue("positionInterval", "Time between packets", positionInterval);
   cmd.AddValue("worker", "worker id when using multithreading to not confuse logging", worker);
   cmd.AddValue("randomSeed", "randomSeed", seed);
   cmd.AddValue("edt", "Early Data Transmission", edt);
@@ -161,12 +163,12 @@ int main(int argc, char *argv[]) {
     Ptr<SimplePositionClient> clientApp = CreateObject<SimplePositionClient>();
     clientApp->SetAttribute("RemoteAddress", AddressValue(remoteHostAddr));
     clientApp->SetAttribute("RemotePort", UintegerValue(ulPort));
-    clientApp->SetAttribute("Threshold", DoubleValue(packetChance));
+    clientApp->SetAttribute("Range", DoubleValue(range));
     clientApp->SetAttribute("Node", PointerValue(ueNodes.Get(i)));
     clientApp->SetAttribute("EnbNode", PointerValue(enbNodes.Get(0)));
     clientApp->SetAttribute("ExtraPayloadSize", UintegerValue(packetsize_app_a + payloadSize));
-    // clientApp->SetAttribute("PositionInterval", TimeValue(positionInterval));
-    clientApp->SetAttribute("Interval", TimeValue(Seconds(syncFrequency)));
+    clientApp->SetAttribute("PositionInterval", TimeValue(Seconds(syncFrequency)));
+    clientApp->SetAttribute("Interval", TimeValue(Seconds(positionInterval)));
     ueNodes.Get(i)->AddApplication(clientApp);
     clientApps.Add(clientApp);
 

@@ -27,18 +27,23 @@ private:
   virtual void StopApplication(void);
 
   void ScheduleTransmit(Time dt);
+  void SchedulePositionGathering(Time dt);
+  void GatherPosition(void);
   void Send(void);
 
   Ptr<Node> m_node;
   Ptr<Node> m_enbNode;
+  std::map<uint32_t, std::string> m_positionMap;
   uint32_t m_nextId;
-  double m_threshold;
-  Ptr<UniformRandomVariable> m_random;
+  double m_range;
 
   Time m_interval;
+  Time m_positionInterval;
   uint32_t m_extraPayloadSize;
+  uint32_t m_amountPositionsToSend;
 
   uint32_t m_sent;
+  uint32_t m_lost;
   Ptr<Socket> m_socket;
   Address m_peerAddress;
   uint16_t m_peerPort;

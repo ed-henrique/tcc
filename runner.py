@@ -26,8 +26,9 @@ class SimulationParameters:
         sim_name,
         random_seed,
         payload_size=1024,
-        sync_frequency=40.0,
-        packet_chance=0.3,
+        sync_frequency=1.0,
+        position_interval=60.0,
+        range=300.0,
         edt=True,
         mobility_file="./50_ues.tcl",
         lib_path="./build/lib",
@@ -36,8 +37,9 @@ class SimulationParameters:
         self.sim_name = sim_name
         self.random_seed = random_seed  # For Random Number Generator
         self.payload_size = payload_size  # in Bytes
-        self.packet_chance = packet_chance  # in Bytes
+        self.range = range  # in Bytes
         self.sync_frequency = sync_frequency  # in Seconds
+        self.position_interval = position_interval  # in Seconds
         self.edt = edt  # If Early Data Transmission should be used
         self.mobility_file = mobility_file
         self.lib_path = (
@@ -51,7 +53,8 @@ class SimulationParameters:
         call = self.simulation
         call += f" --simName={self.sim_name}"
         call += f" --randomSeed={self.random_seed}"
-        call += f" --packetChance={self.packet_chance}"
+        call += f" --range={self.range}"
+        call += f" --positionInterval={self.positionInterval}"
         call += f" --payloadSize={self.payload_size}"
         call += f" --syncFrequency={self.sync_frequency}"
         call += f" --edt={self.edt}"
@@ -142,7 +145,7 @@ for i in range(1, seed + 1):
                 sim_name=f"{command}_coverage",
                 simulation=f"./build/scratch/{command}",
                 random_seed=i,
-                packet_chance=0.5,
+                range=500.0,
             )
         )
 
@@ -182,9 +185,20 @@ for i in range(1, seed + 1):
                 sim_name=f"{command}_sync_frequency",
                 simulation=f"./build/scratch/{command}",
                 random_seed=i,
-                sync_frequency=60.0,
+                sync_frequency=2.0,
             )
         )
+
+        # Frequência de Envio de Pacotes
+        simu_queue.add_task(
+            SimulationParameters(
+                sim_name=f"{command}_position_interval",
+                simulation=f"./build/scratch/{command}",
+                random_seed=i,
+                position_interval=90.0,
+            )
+        )
+
 simu_queue.start_workers()
 
 simu_queue.join()

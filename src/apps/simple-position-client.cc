@@ -14,7 +14,6 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/mobility-module.h"
 #include "simple-position-client.h"
-#include "ns3/random-variable-stream.h"
 
 #include <sstream>
 #include <iostream>
@@ -35,6 +34,11 @@ TypeId SimplePositionClient::GetTypeId(void) {
                    TimeValue(Seconds(1.0)),
                    MakeTimeAccessor(&SimplePositionClient::m_interval),
                    MakeTimeChecker())
+    .AddAttribute("PositionInterval", 
+                   "The time to wait between gathering position",
+                   TimeValue(Seconds(1.0)),
+                   MakeTimeAccessor(&SimplePositionClient::m_positionInterval),
+                   MakeTimeChecker())
     .AddAttribute("Node", 
                    "The node in which the application is installed",
                    PointerValue(nullptr),
@@ -45,15 +49,20 @@ TypeId SimplePositionClient::GetTypeId(void) {
                    UintegerValue(0),
                    MakeUintegerAccessor(&SimplePositionClient::m_extraPayloadSize),
                    MakeUintegerChecker<uint32_t>())
+    .AddAttribute("AmountPositionsToSend", 
+                   "Amount of positions to send each time",
+                   UintegerValue(10),
+                   MakeUintegerAccessor(&SimplePositionClient::m_amountPositionsToSend),
+                   MakeUintegerChecker<uint32_t>())
     .AddAttribute("EnbNode", 
                    "The enbNode to which the node is attached to",
                    PointerValue(nullptr),
                    MakePointerAccessor(&SimplePositionClient::m_enbNode),
                    MakePointerChecker<Node>())
-    .AddAttribute("Threshold", 
-                   "Chance to send the packet",
-                   DoubleValue(0.5),
-                   MakeDoubleAccessor(&SimplePositionClient::m_threshold),
+    .AddAttribute("Range", 
+                   "The enbNode range",
+                   DoubleValue(0.0),
+                   MakeDoubleAccessor(&SimplePositionClient::m_range),
                    MakeDoubleChecker<double>())
     .AddAttribute("RemoteAddress", 
                    "The destination Address of the outbound packets",
@@ -84,12 +93,12 @@ TypeId SimplePositionClient::GetTypeId(void) {
 SimplePositionClient::SimplePositionClient() {
   NS_LOG_FUNCTION(this);
   m_sent = 0;
+  m_lost = 0;
   m_socket = 0;
   m_node = nullptr;
   m_enbNode = nullptr;
   m_nextId = 0;
   m_extraPayloadSize = 0;
-  m_random = CreateObject<UniformRandomVariable>();
   m_sendEvent = EventId();
 }
 
@@ -143,6 +152,7 @@ void  SimplePositionClient::StartApplication(void) {
   m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
   m_socket->SetAllowBroadcast(false);
   ScheduleTransmit(Seconds(0.));
+  SchedulePositionGathering(Seconds(0.));
 }
 
 void  SimplePositionClient::StopApplication() {
@@ -150,15 +160,38 @@ void  SimplePositionClient::StopApplication() {
 
   if (m_socket != 0)  {
     m_socket->Close();
+    m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
     m_socket = 0;
   }
 
   Simulator::Cancel(m_sendEvent);
+  m_positionMap.clear();
 }
 
 void  SimplePositionClient::ScheduleTransmit(Time dt) {
   NS_LOG_FUNCTION(this << dt);
   m_sendEvent = Simulator::Schedule(dt, &SimplePositionClient::Send, this);
+}
+
+void  SimplePositionClient::SchedulePositionGathering(Time dt) {
+  NS_LOG_FUNCTION(this << dt);
+  Simulator::Schedule(dt, &SimplePositionClient::GatherPosition, this);
+}
+
+void  SimplePositionClient::GatherPosition(void) {
+  NS_LOG_FUNCTION(this);
+
+  Ptr<MobilityModel> ueMobility = m_node->GetObject<MobilityModel>();
+  Vector uePos = ueMobility->GetPosition();
+
+  std::ostringstream pos;
+  pos << uePos.x << "," << uePos.y << "," << uePos.z;
+  std::string msg = pos.str();
+
+  m_positionMap[m_nextId++] = msg;
+  NS_LOG_INFO("consumed 33 mJ");
+
+  Simulator::Schedule(m_positionInterval, &SimplePositionClient::GatherPosition, this);
 }
 
 void  SimplePositionClient::Send(void) {
@@ -175,15 +208,23 @@ void  SimplePositionClient::Send(void) {
 
   NS_LOG_INFO("is " << distance << "m from eNB");
 
+  if (m_positionMap.size() < m_amountPositionsToSend) {
+    ScheduleTransmit(m_interval);
+    return;
+  }
+
   Address localAddress;
   m_socket->GetSockName(localAddress);
 
   std::ostringstream pos;
-  pos << m_nextId++ << " " << uePos.x << "," << uePos.y << "," << uePos.z;
+  for (auto posPair = m_positionMap.rbegin(), next_it = it; posPair != m_positionMap.rend(); it = next_it) {
+    ++next_it;
+    pos << posPair->first << " " << posPair->second << "\n";
+    m_positionMap.erase(posPair);
+  }
+
   pos << std::string(m_extraPayloadSize, '.');
   std::string msg = pos.str();
-
-  NS_LOG_INFO("consumed 33 mJ");
 
   Ptr<Packet> p = Create<Packet>(
       reinterpret_cast<const uint8_t*>(msg.c_str()), 
@@ -198,8 +239,9 @@ void  SimplePositionClient::Send(void) {
     m_txTraceWithAddresses(p, localAddress, Inet6SocketAddress(Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
   }
 
-  if (m_random->GetValue(0.0, 1.0) > m_threshold) {
-    NS_LOG_INFO("Package lost");
+  if (m_range > distance) {
+    NS_LOG_INFO("Package lost with " << m_amountPositionsToSend << " positions");
+    ++m_lost;
     ++m_sent;
 
     ScheduleTransmit(m_interval);

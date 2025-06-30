@@ -59,10 +59,10 @@ TypeId CheckpointingPositionClient::GetTypeId(void) {
                    PointerValue(nullptr),
                    MakePointerAccessor(&CheckpointingPositionClient::m_enbNode),
                    MakePointerChecker<Node>())
-    .AddAttribute("Threshold", 
-                   "Chance to send the packet",
-                   DoubleValue(0.5),
-                   MakeDoubleAccessor(&CheckpointingPositionClient::m_threshold),
+    .AddAttribute("Range", 
+                   "The enbNode range",
+                   DoubleValue(0.0),
+                   MakeDoubleAccessor(&CheckpointingPositionClient::m_range),
                    MakeDoubleChecker<double>())
     .AddAttribute("RemoteAddress", 
                    "The destination Address of the outbound packets",
@@ -93,12 +93,12 @@ TypeId CheckpointingPositionClient::GetTypeId(void) {
 CheckpointingPositionClient::CheckpointingPositionClient() {
   NS_LOG_FUNCTION(this);
   m_sent = 0;
+  m_lost = 0;
   m_socket = 0;
   m_node = nullptr;
   m_enbNode = nullptr;
   m_nextId = 0;
   m_extraPayloadSize = 0;
-  m_random = CreateObject<UniformRandomVariable>();
   m_sendEvent = EventId();
 }
 
@@ -237,8 +237,9 @@ void  CheckpointingPositionClient::Send(void) {
     m_txTraceWithAddresses(p, localAddress, Inet6SocketAddress(Ipv6Address::ConvertFrom(m_peerAddress), m_peerPort));
   }
 
-  if (m_random->GetValue(0.0, 1.0) > m_threshold) {
+  if (m_range > distance) {
     NS_LOG_INFO("Package lost");
+    ++m_lost;
     ++m_sent;
 
     ScheduleTransmit(m_interval);

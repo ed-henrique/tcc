@@ -13,7 +13,6 @@
 #include "ns3/uinteger.h"
 #include "simple-position-server.h"
 
-#include <random>
 #include <sstream>
 #include <iostream>
 
@@ -151,12 +150,41 @@ void  SimplePositionServer::HandleRead(Ptr<Socket> socket) {
                    Inet6SocketAddress::ConvertFrom(from).GetPort());
     }
 
-    size_t idSep = msg.find(" ");
+    // std::istringstream batch(msg);
+    // std::string line;
 
-    if (idSep != std::string::npos) {
-      std::string posIdRaw = msg.substr(0, idSep);
-      NS_LOG_INFO(posIdRaw << " OK");
-    }
+    // std::ostringstream ack;
+    // while (std::getline(batch, line)) {
+    //   if (line[0] == '.') {
+    //     break;
+    //   }
+
+    //   size_t idSep = line.find(" ");
+
+    //   if (idSep != std::string::npos) {
+    //     std::string posIdRaw = line.substr(0, idSep);
+    //     ack << posIdRaw << " OK\n";
+    //   }
+    // }
+
+    // std::string response = ack.str();
+    // Ptr<Packet> okPacket = Create<Packet>(
+    //     reinterpret_cast<const uint8_t*>(response.c_str()), 
+    //     response.size()
+    // );
+
+    // NS_LOG_LOGIC("Sending OK packet");
+    // socket->SendTo(okPacket, 0, from);
+
+    // if (InetSocketAddress::IsMatchingType(from)) {
+    //   NS_LOG_INFO("At time " << Simulator::Now().As(Time::S) << " server sent '" << msg << "' to " <<
+    //                InetSocketAddress::ConvertFrom(from).GetIpv4() << " port " <<
+    //                InetSocketAddress::ConvertFrom(from).GetPort());
+    // } else if (Inet6SocketAddress::IsMatchingType(from)) {
+    //   NS_LOG_INFO("At time " << Simulator::Now().As(Time::S) << " server sent '" << msg << "' to " <<
+    //                Inet6SocketAddress::ConvertFrom(from).GetIpv6() << " port " <<
+    //                Inet6SocketAddress::ConvertFrom(from).GetPort());
+    // }
 
     delete[] msgRaw;
   }
