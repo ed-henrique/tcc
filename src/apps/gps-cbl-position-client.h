@@ -1,5 +1,5 @@
-#ifndef CHECKPOINTING_POSITION_CLIENT_H
-#define CHECKPOINTING_POSITION_CLIENT_H
+#ifndef SIMPLE_POSITION_CLIENT_H
+#define SIMPLE_POSITION_CLIENT_H
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
@@ -13,11 +13,11 @@ namespace ns3 {
 class Socket;
 class Packet;
 
-class CheckpointingPositionClient : public Application {
+class GPSCBLPositionClient : public Application {
 public:
   static TypeId GetTypeId(void);
-  CheckpointingPositionClient();
-  virtual ~CheckpointingPositionClient();
+  GPSCBLPositionClient();
+  virtual ~GPSCBLPositionClient();
 
 protected:
   virtual void DoDispose(void);
@@ -32,8 +32,6 @@ private:
   void Inside(void);
   void GatherPosition(void);
   void Send(void);
-
-  void HandleRead(Ptr<Socket> socket);
 
   Ptr<Node> m_node;
   Ptr<Node> m_enbNode;

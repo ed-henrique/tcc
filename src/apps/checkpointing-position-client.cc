@@ -153,6 +153,7 @@ void  CheckpointingPositionClient::StartApplication(void) {
   m_socket->SetAllowBroadcast(false);
   ScheduleTransmit(Seconds(0.));
   SchedulePositionGathering(Seconds(0.));
+  ScheduleInside(Seconds(0.));
 }
 
 void  CheckpointingPositionClient::StopApplication() {
@@ -168,6 +169,11 @@ void  CheckpointingPositionClient::StopApplication() {
   m_positionMap.clear();
 }
 
+void  CheckpointingPositionClient::ScheduleInside(Time dt) {
+  NS_LOG_FUNCTION(this << dt);
+  Simulator::Schedule(dt, &CheckpointingPositionClient::Inside, this);
+}
+
 void  CheckpointingPositionClient::ScheduleTransmit(Time dt) {
   NS_LOG_FUNCTION(this << dt);
   m_sendEvent = Simulator::Schedule(dt, &CheckpointingPositionClient::Send, this);
@@ -176,6 +182,25 @@ void  CheckpointingPositionClient::ScheduleTransmit(Time dt) {
 void  CheckpointingPositionClient::SchedulePositionGathering(Time dt) {
   NS_LOG_FUNCTION(this << dt);
   Simulator::Schedule(dt, &CheckpointingPositionClient::GatherPosition, this);
+}
+
+void  CheckpointingPositionClient::Inside(void) {
+  NS_LOG_FUNCTION(this);
+
+  Ptr<MobilityModel> ueMobility = m_node->GetObject<MobilityModel>();
+  Ptr<MobilityModel> enbMobility = m_enbNode->GetObject<MobilityModel>();
+
+  Vector uePos = ueMobility->GetPosition();
+  Vector enbPos = enbMobility->GetPosition();
+  double distance = CalculateDistance(uePos, enbPos);
+
+  if (m_range <= distance) {
+    NS_LOG_INFO("inside");
+  } else {
+    NS_LOG_INFO("outside");
+  }
+
+  Simulator::Schedule(Seconds(1.0), &CheckpointingPositionClient::Inside, this);
 }
 
 void  CheckpointingPositionClient::GatherPosition(void) {

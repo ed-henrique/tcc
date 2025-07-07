@@ -13,84 +13,84 @@
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/mobility-module.h"
-#include "simple-position-client.h"
+#include "gps-cbl-position-client.h"
 
 #include <sstream>
 #include <iostream>
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("SimplePositionClientApplication");
+NS_LOG_COMPONENT_DEFINE("GPSCBLPositionClientApplication");
 
-NS_OBJECT_ENSURE_REGISTERED(SimplePositionClient);
+NS_OBJECT_ENSURE_REGISTERED(GPSCBLPositionClient);
 
-TypeId SimplePositionClient::GetTypeId(void) {
-  static TypeId tid = TypeId("ns3::SimplePositionClient")
+TypeId GPSCBLPositionClient::GetTypeId(void) {
+  static TypeId tid = TypeId("ns3::GPSCBLPositionClient")
     .SetParent<Application>()
     .SetGroupName("Applications")
-    .AddConstructor<SimplePositionClient>()
+    .AddConstructor<GPSCBLPositionClient>()
     .AddAttribute("Interval", 
                    "The time to wait between packets",
                    TimeValue(Seconds(1.0)),
-                   MakeTimeAccessor(&SimplePositionClient::m_interval),
+                   MakeTimeAccessor(&GPSCBLPositionClient::m_interval),
                    MakeTimeChecker())
     .AddAttribute("PositionInterval", 
                    "The time to wait between gathering position",
                    TimeValue(Seconds(1.0)),
-                   MakeTimeAccessor(&SimplePositionClient::m_positionInterval),
+                   MakeTimeAccessor(&GPSCBLPositionClient::m_positionInterval),
                    MakeTimeChecker())
     .AddAttribute("Node", 
                    "The node in which the application is installed",
                    PointerValue(nullptr),
-                   MakePointerAccessor(&SimplePositionClient::m_node),
+                   MakePointerAccessor(&GPSCBLPositionClient::m_node),
                    MakePointerChecker<Node>())
     .AddAttribute("ExtraPayloadSize", 
                    "Extra payload size to add to packets",
                    UintegerValue(0),
-                   MakeUintegerAccessor(&SimplePositionClient::m_extraPayloadSize),
+                   MakeUintegerAccessor(&GPSCBLPositionClient::m_extraPayloadSize),
                    MakeUintegerChecker<uint32_t>())
     .AddAttribute("AmountPositionsToSend", 
                    "Amount of positions to send each time",
                    UintegerValue(10),
-                   MakeUintegerAccessor(&SimplePositionClient::m_amountPositionsToSend),
+                   MakeUintegerAccessor(&GPSCBLPositionClient::m_amountPositionsToSend),
                    MakeUintegerChecker<uint32_t>())
     .AddAttribute("EnbNode", 
                    "The enbNode to which the node is attached to",
                    PointerValue(nullptr),
-                   MakePointerAccessor(&SimplePositionClient::m_enbNode),
+                   MakePointerAccessor(&GPSCBLPositionClient::m_enbNode),
                    MakePointerChecker<Node>())
     .AddAttribute("Range", 
                    "The enbNode range",
                    DoubleValue(0.0),
-                   MakeDoubleAccessor(&SimplePositionClient::m_range),
+                   MakeDoubleAccessor(&GPSCBLPositionClient::m_range),
                    MakeDoubleChecker<double>())
     .AddAttribute("RemoteAddress", 
                    "The destination Address of the outbound packets",
                    AddressValue(),
-                   MakeAddressAccessor(&SimplePositionClient::m_peerAddress),
+                   MakeAddressAccessor(&GPSCBLPositionClient::m_peerAddress),
                    MakeAddressChecker())
     .AddAttribute("RemotePort", 
                    "The destination port of the outbound packets",
                    UintegerValue(0),
-                   MakeUintegerAccessor(&SimplePositionClient::m_peerPort),
+                   MakeUintegerAccessor(&GPSCBLPositionClient::m_peerPort),
                    MakeUintegerChecker<uint16_t>())
     .AddTraceSource("Tx", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor(&SimplePositionClient::m_txTrace),
+                     MakeTraceSourceAccessor(&GPSCBLPositionClient::m_txTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource("Rx", "A packet has been received",
-                     MakeTraceSourceAccessor(&SimplePositionClient::m_rxTrace),
+                     MakeTraceSourceAccessor(&GPSCBLPositionClient::m_rxTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource("TxWithAddresses", "A new packet is created and is sent",
-                     MakeTraceSourceAccessor(&SimplePositionClient::m_txTraceWithAddresses),
+                     MakeTraceSourceAccessor(&GPSCBLPositionClient::m_txTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
     .AddTraceSource("RxWithAddresses", "A packet has been received",
-                     MakeTraceSourceAccessor(&SimplePositionClient::m_rxTraceWithAddresses),
+                     MakeTraceSourceAccessor(&GPSCBLPositionClient::m_rxTraceWithAddresses),
                      "ns3::Packet::TwoAddressTracedCallback")
   ;
   return tid;
 }
 
-SimplePositionClient::SimplePositionClient() {
+GPSCBLPositionClient::GPSCBLPositionClient() {
   NS_LOG_FUNCTION(this);
   m_sent = 0;
   m_lost = 0;
@@ -102,19 +102,19 @@ SimplePositionClient::SimplePositionClient() {
   m_sendEvent = EventId();
 }
 
-SimplePositionClient::~SimplePositionClient() {
+GPSCBLPositionClient::~GPSCBLPositionClient() {
   NS_LOG_FUNCTION(this);
   m_socket = 0;
   m_node = nullptr;
   m_enbNode = nullptr;
 }
 
-void SimplePositionClient::DoDispose(void) {
+void GPSCBLPositionClient::DoDispose(void) {
   NS_LOG_FUNCTION(this);
   Application::DoDispose();
 }
 
-void  SimplePositionClient::StartApplication(void) {
+void  GPSCBLPositionClient::StartApplication(void) {
   NS_LOG_FUNCTION(this);
 
   if (m_socket == 0) {
@@ -156,7 +156,7 @@ void  SimplePositionClient::StartApplication(void) {
   ScheduleInside(Seconds(0.));
 }
 
-void  SimplePositionClient::StopApplication() {
+void  GPSCBLPositionClient::StopApplication() {
   NS_LOG_FUNCTION(this);
 
   if (m_socket != 0)  {
@@ -169,22 +169,22 @@ void  SimplePositionClient::StopApplication() {
   m_positionMap.clear();
 }
 
-void  SimplePositionClient::ScheduleInside(Time dt) {
+void  GPSCBLPositionClient::ScheduleInside(Time dt) {
   NS_LOG_FUNCTION(this << dt);
-  Simulator::Schedule(dt, &SimplePositionClient::Inside, this);
+  Simulator::Schedule(dt, &GPSCBLPositionClient::Inside, this);
 }
 
-void  SimplePositionClient::ScheduleTransmit(Time dt) {
+void  GPSCBLPositionClient::ScheduleTransmit(Time dt) {
   NS_LOG_FUNCTION(this << dt);
-  m_sendEvent = Simulator::Schedule(dt, &SimplePositionClient::Send, this);
+  m_sendEvent = Simulator::Schedule(dt, &GPSCBLPositionClient::Send, this);
 }
 
-void  SimplePositionClient::SchedulePositionGathering(Time dt) {
+void  GPSCBLPositionClient::SchedulePositionGathering(Time dt) {
   NS_LOG_FUNCTION(this << dt);
-  Simulator::Schedule(dt, &SimplePositionClient::GatherPosition, this);
+  Simulator::Schedule(dt, &GPSCBLPositionClient::GatherPosition, this);
 }
 
-void  SimplePositionClient::Inside(void) {
+void  GPSCBLPositionClient::Inside(void) {
   NS_LOG_FUNCTION(this);
 
   Ptr<MobilityModel> ueMobility = m_node->GetObject<MobilityModel>();
@@ -200,26 +200,28 @@ void  SimplePositionClient::Inside(void) {
     NS_LOG_INFO("outside");
   }
 
-  Simulator::Schedule(Seconds(1.0), &SimplePositionClient::Inside, this);
+  Simulator::Schedule(Seconds(1.0), &GPSCBLPositionClient::Inside, this);
 }
 
-void  SimplePositionClient::GatherPosition(void) {
+void  GPSCBLPositionClient::GatherPosition(void) {
   NS_LOG_FUNCTION(this);
 
   Ptr<MobilityModel> ueMobility = m_node->GetObject<MobilityModel>();
   Vector uePos = ueMobility->GetPosition();
+  Vector ueVes = ueMobility->GetVelocity();
+  double ueSpeed = std::sqrt(ueVes.x*ueVes.x + ueVes.y*ueVes.y);
 
   std::ostringstream pos;
-  pos << uePos.x << "," << uePos.y << "," << uePos.z;
+  pos << uePos.x << "," << uePos.y << "," << uePos.z << ";" << ueSpeed;
   std::string msg = pos.str();
 
   m_positionMap[m_nextId++] = msg;
   NS_LOG_INFO("consumed 33 mJ");
 
-  Simulator::Schedule(m_positionInterval, &SimplePositionClient::GatherPosition, this);
+  Simulator::Schedule(m_positionInterval, &GPSCBLPositionClient::GatherPosition, this);
 }
 
-void  SimplePositionClient::Send(void) {
+void  GPSCBLPositionClient::Send(void) {
   NS_LOG_FUNCTION(this);
 
   NS_ASSERT(m_sendEvent.IsExpired());
@@ -242,15 +244,15 @@ void  SimplePositionClient::Send(void) {
   m_socket->GetSockName(localAddress);
 
   std::ostringstream pos;
-  for (auto posPair = m_positionMap.rbegin(); posPair != m_positionMap.rend(); ++posPair) {
+  pos << m_node->GetId() << " ";
+  for (auto posPair = m_positionMap.rbegin(), next_it = posPair; posPair != m_positionMap.rend(); posPair = next_it) {
+    ++next_it;
     pos << posPair->first << " " << posPair->second << "\n";
+    m_positionMap.erase(posPair->first);
   }
 
-  m_positionMap.clear();
-  pos << std::string(m_extraPayloadSize, '.');
+  pos << " " << std::string(m_extraPayloadSize, '.');
   std::string msg = pos.str();
-
-  std::cout << msg << std::endl;
 
   Ptr<Packet> p = Create<Packet>(
       reinterpret_cast<const uint8_t*>(msg.c_str()), 

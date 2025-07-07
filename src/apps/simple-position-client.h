@@ -26,8 +26,10 @@ private:
   virtual void StartApplication(void);
   virtual void StopApplication(void);
 
+  void ScheduleInside(Time dt);
   void ScheduleTransmit(Time dt);
   void SchedulePositionGathering(Time dt);
+  void Inside(void);
   void GatherPosition(void);
   void Send(void);
 
