@@ -57,16 +57,59 @@ def detectar_consumo_de_energia_por_no(cmd: str) -> pd.DataFrame:
     return df
 
 
-def detectar_colisoes(cmd: str) -> pd.DataFrame:
-    dfs = []
-    for f in glob.glob(LOGS_DIR + f"/{cmd}/**/*_Spectral_Uplink.log"):
-        df = pd.read_csv(f, names=[f"cell_{i}" for i in range(13)])
-        df = df.drop("cell_12", axis=1)
-        df = df[~df.isin([0, -1]).sum(axis=1) >= 2]
+def detectar_pacotes_perdidos_por_no(cmd: str) -> pd.DataFrame:
+    dfs_log = []
+    for f in glob.glob(LOGS_DIR + f"/{cmd}_*.log"):
+        dados_global = []
 
-        dfs.append(df)
+        with open(f, "r") as content:
+            for line in content:
+                if "Package lost with " in line:
+                    dados = line.split()
 
-    return pd.concat(dfs)
+                    dados_global.append((int(dados[1]), int(dados[-2])))
+
+        df = pd.DataFrame(dados_global, columns=["id", "lost_packets"])
+        df["id"] = df["id"] + 1
+        df = df.groupby("id").agg(pd.Series.sum)
+
+        dfs_log.append(df)
+
+    df = pd.concat(dfs_log)
+    df = df.groupby("id").agg(pd.Series.mean)
+    # print(df)
+
+    return df
+
+
+def detectar_tempo_fora_de_alcance_por_no(cmd: str) -> pd.DataFrame:
+    dfs_log = []
+    for f in glob.glob(LOGS_DIR + f"/{cmd}_*.log"):
+        dados_global = []
+
+        with open(f, "r") as content:
+            for line in content:
+                if "inside" in line:
+                    dados = line.split()
+                    dados_global.append((int(dados[1]), 1))
+                elif "outside" in line:
+                    dados = line.split()
+                    dados_global.append((int(dados[1]), 0))
+
+        df = pd.DataFrame(dados_global, columns=["id", "is_inside"])
+        df["id"] = df["id"] + 1
+        df["time_elapsed"] = df.groupby("id")["id"].transform("size")
+        df = df.groupby("id").agg(
+            is_inside_sum=("is_inside", "sum"),
+            time_elapsed_first=("time_elapsed", "first"),
+        )
+
+        dfs_log.append(df)
+
+    df = pd.concat(dfs_log)
+    df = df.groupby("id").agg(pd.Series.mean)
+
+    return df
 
 
 def main():
@@ -80,13 +123,22 @@ def main():
         "coverage": "Alcance da Torre",
         "node_amount": "Densidade da Rede",
         "payload_size": "Tamanho do Payload",
-        "sync_frequency": "Frequência de Envio dos Dados",
+        "sync_frequency": "Frequência de Coleta de Dados de Rastreamento",
+        "position_interval": "Frequência de Envio dos Dados de Rastreamento",
         "transmission_mode": "Modo de Transmissão",
     }
 
     dfs_consumo = {}
     for variant in variants:
         dfs_consumo[variant] = {}
+
+    dfs_perdidos = {}
+    for variant in variants:
+        dfs_perdidos[variant] = {}
+
+    dfs_coverage = {}
+    for variant in variants:
+        dfs_coverage[variant] = {}
 
     for cmd in cmds:
         for variant in variants:
@@ -97,18 +149,16 @@ def main():
             df_consumo = detectar_consumo_de_energia_por_no(f"{cmd}_{variant}")
             dfs_consumo[variant][cmd] = df_consumo
 
-            # Detecção de colisões
-            #
-            # As colisões ocorrem quando ao menos 2 colunas de uma linha qualquer têm o
-            # mesmo valor, que é diferente de -1. O índice dessa linha nos dá o momento
-            # em milissegundos em que ocorreu a colisão, e o valor repetido é o ID
-            # daquela UE numa célula específica do eNB.
-            #
-            # OBS: Se não houverem colisões, a simulação é duvidosa e/ou inútil, por
-            # não estar testando os limites daquele cenário.
-            # df_colisoes = detectar_colisoes(f"{cmd}_{variant}")
-            # print(f"{cmd}_{variant} (Colisões)")
-            # print(df_colisoes)
+            df_coverage = detectar_tempo_fora_de_alcance_por_no(f"{cmd}_{variant}")
+            dfs_coverage[variant][cmd] = df_coverage
+
+            if cmd == "simple":
+                # Detecção da quantidade de pacotes perdidos
+                #
+                # A energia gasta por nó é obtida pelo modelo de energia do LENA-NB e uma
+                # estimativa a partir dos logs de coleta de posição.
+                df_perdidos = detectar_pacotes_perdidos_por_no(f"{cmd}_{variant}")
+                dfs_perdidos[variant][cmd] = df_perdidos
 
     n_envs = len(dfs_consumo)
     fig, axes = plt.subplots(n_envs, 1, figsize=(12, 4 * n_envs), sharex=True)
@@ -151,10 +201,18 @@ def main():
     for row, env in enumerate(non_default_envs):
         for i, cmd in enumerate(cmds):
             dfs_consumo["default"][cmd]["energy_consumed"].plot(
-                ax=axes[row, i], label="Padrão", color="blue", marker="o", linestyle="-"
+                ax=axes[row, i],
+                label="Padrão",
+                color="blue",
+                marker="o",
+                linestyle="--",
             )
             dfs_consumo[env][cmd]["energy_consumed"].plot(
-                ax=axes[row, i], label=env, color="green", marker="x", linestyle="--"
+                ax=axes[row, i],
+                label=variants[env],
+                color="red",
+                marker="o",
+                linestyle="-",
             )
             axes[row, i].set_title(
                 f"Algoritmo {cmd.title()}: Padrão vs {variants[env]}"
@@ -167,6 +225,43 @@ def main():
     plt.tight_layout()
     plt.savefig("energy_consumed_per_cmd.png")
     plt.close()
+
+    # Tempo Fora de Cobertura
+    # n_envs = 2
+    # fig, axes = plt.subplots(
+    #     n_envs, len(cmds), figsize=(16, 4 * n_envs), sharex="col", sharey="row"
+    # )
+
+    # if n_envs == 1:
+    #     axes = axes.reshape(1, -1)
+
+    # for row, env in enumerate(non_default_envs):
+    #     for i, cmd in enumerate(cmds):
+    #         dfs_coverage["default"][cmd]["is_inside_sum"].plot(
+    #             ax=axes[row, i],
+    #             label="Padrão",
+    #             color="blue",
+    #             marker="o",
+    #             linestyle="--",
+    #         )
+    #         dfs_coverage["coverage"][cmd]["is_inside_sum"].plot(
+    #             ax=axes[row, i],
+    #             label=variants[env],
+    #             color="red",
+    #             marker="o",
+    #             linestyle="-",
+    #         )
+    #         axes[row, i].set_title(
+    #             f"Algoritmo {cmd.title()}: Padrão vs {variants[env]}"
+    #         )
+    #         axes[row, i].set_ylabel("Tempo Fora de Cobertura")
+    #         axes[row, i].grid(True)
+    #         axes[row, i].legend()
+
+    # plt.xlabel("ID")
+    # plt.tight_layout()
+    # plt.savefig("coverage_per_cmd.png")
+    # plt.close()
 
 
 if __name__ == "__main__":
